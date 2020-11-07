@@ -21,7 +21,7 @@ jobs:
     env:
       MINIO_ACCESS_KEY: test
       MINIO_SECRET_KEY: testtest
-      S3_ENDPOINT=s3:9000
+      S3_ENDPOINT: s3:9000
 
     steps:
       - uses: actions/checkout@v2
