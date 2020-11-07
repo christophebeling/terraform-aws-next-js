@@ -1,12 +1,18 @@
 import { S3Handler } from 'aws-lambda';
 import { S3 } from 'aws-sdk';
-import unzipper from 'unzipper';
-import { getType } from 'mime';
-
-const deployBucket = process.env.TARGET_BUCKET;
+import { deployTrigger } from './deploy-trigger';
 
 const CacheControlImmutable = 'public,max-age=31536000,immutable';
 const CacheControlStaticHtml = 'max-age=300';
+const deploymentConfigurationKey = '__tf-next/deployment.json';
+
+/**
+ * Reads or creates a deployment.json file which holds information about
+ * which files were included in the deployment
+ *
+ * It returns a string of keys of files that can be de
+ */
+function updateDeploymentConfiguration(s3: S3, bucket: string) {}
 
 export const handler: S3Handler = async function (event) {
   const s3 = new S3({ apiVersion: '2006-03-01' });
@@ -14,50 +20,13 @@ export const handler: S3Handler = async function (event) {
   // Get needed information of the event
   const { object } = event.Records[0].s3;
   const { versionId, key } = object;
-  const bucket = event.Records[0].s3.bucket.name;
+  const sourceBucket = event.Records[0].s3.bucket.name;
 
-  const params: S3.Types.DeleteObjectRequest = {
-    Key: key,
-    Bucket: bucket,
-    VersionId: versionId,
-  };
-
-  // GetObject
-  const zip = s3
-    .getObject(params)
-    .createReadStream()
-    .pipe(unzipper.Parse({ forceStream: true }));
-
-  const uploads: Promise<S3.ManagedUpload.SendData>[] = [];
-
-  for await (const e of zip) {
-    const entry = e as unzipper.Entry;
-
-    const fileName = entry.path;
-    const type = entry.type;
-    if (type === 'File') {
-      // Get ContentType
-      const ContentType = getType(fileName) || 'text/html';
-
-      const uploadParams: S3.Types.PutObjectRequest = {
-        Bucket: deployBucket,
-        Key: fileName,
-        Body: entry,
-        ContentType,
-        CacheControl:
-          ContentType === 'text/html'
-            ? CacheControlStaticHtml
-            : CacheControlImmutable,
-      };
-
-      uploads.push(s3.upload(uploadParams).promise());
-    } else {
-      entry.autodrain();
-    }
-  }
-
-  await Promise.all(uploads);
-
-  // Cleanup
-  await s3.deleteObject(params).promise();
+  await deployTrigger({
+    s3,
+    sourceBucket,
+    deployBucket: process.env.TARGET_BUCKET,
+    key,
+    versionId,
+  });
 };
