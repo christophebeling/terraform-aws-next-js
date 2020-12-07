@@ -7,7 +7,10 @@ module.exports = {
       tsConfig: 'tsconfig.test.json',
     },
   },
-  // We use an increased timeout here because in the worst case
-  // AWS SAM needs to download a docker image before the test can run
-  testTimeout: 60000,
+  // By default we only run tests in the packages subfolders
+  // For e2e tests see the jest.e2e.config.js file
+  testMatch: [
+    '<rootDir>/packages/**/__tests__/**/*.[jt]s?(x)',
+    '<rootDir>/packages/**/?(*.)+(spec|test).[jt]s?(x)',
+  ],
 };

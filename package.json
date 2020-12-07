@@ -9,7 +9,9 @@
     "test/fixtures/*"
   ],
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "test:e2e:prepare": "node test/build-fixtures.js",
+    "test:e2e": "jest --config jest.e2e.config.js"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.64",

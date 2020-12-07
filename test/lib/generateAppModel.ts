@@ -73,15 +73,21 @@ function unzipToLocation(zipPath: string, location: string) {
   });
 }
 
+export interface SAM {
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  sendRequest(payload: SendRequestPayload): Promise<SendRequestResponse>;
+  mapping: Map<string, string>;
+}
+
 interface Props {
   lambdas: Record<string, ConfigLambda>;
   cwd: string;
 }
 
-export async function generateSAM({ lambdas, cwd }: Props) {
+export async function generateSAM({ lambdas, cwd }: Props): Promise<SAM> {
   const _tmpDir = tmpDir();
-  // const workdir = _tmpDir.name;
-  const workdir = '/Users/felix/code/tmp/xyz';
+  const workdir = _tmpDir.name;
   const mapping = new Map<string, string>();
 
   // Generate the SAM yml
@@ -94,7 +100,7 @@ export async function generateSAM({ lambdas, cwd }: Props) {
   // Unpack all lambdas
   for (const [key, lambda] of Object.entries(lambdas)) {
     const functionName = randomServerlessFunctionName();
-    mapping.set(key, functionName);
+    mapping.set(`/${key}`, functionName);
     await unzipToLocation(
       path.join(cwd, lambda.filename),
       path.join(workdir, functionName)
@@ -161,7 +167,6 @@ export async function generateSAM({ lambdas, cwd }: Props) {
       .promise()
       .then((response) => {
         // Try to unpack the response
-
         const _payload = JSON.parse(
           response.Payload!.toString()
         ) as APIGatewayProxyResult;
