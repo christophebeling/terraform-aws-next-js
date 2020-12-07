@@ -49,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: e2e-fixtures
-          path: test/**/.next-tf/**/*
+          path: /**/.next-tf/**/*
 
   test-e2e:
     needs: test-e2e-prepare
