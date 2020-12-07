@@ -40,16 +40,20 @@ jobs:
             **/node_modules
           key: ${{ runner.os }}-test
 
+      - name: Yarn install
+        run: yarn --frozen-lockfile --cache-folder .yarn
+
+      - name: Build tf-next
+        run: yarn --cwd packages/terraform-next-build build
+
       - name: Build e2e fixtures
-        run: |
-          yarn --frozen-lockfile --cache-folder .yarn
-          yarn test:e2e:prepare
+        run: yarn test:e2e:prepare
 
       - name: Upload e2e fixtures
         uses: actions/upload-artifact@v2
         with:
           name: e2e-fixtures
-          path: /**/.next-tf/**/*
+          path: test/**/.next-tf/**/*
 
   test-e2e:
     needs: test-e2e-prepare
