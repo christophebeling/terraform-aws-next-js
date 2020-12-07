@@ -54,6 +54,7 @@ jobs:
         with:
           name: e2e-fixtures
           path: test/**/.next-tf/**/*
+          if-no-files-found: error
 
   test-e2e:
     needs: test-e2e-prepare
@@ -79,6 +80,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: e2e-fixtures
+          path: test
       - run: yarn install --frozen-lockfile --check-files
       - name: Run Test
         run: yarn test:e2e
