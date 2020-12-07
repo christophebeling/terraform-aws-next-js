@@ -5,17 +5,32 @@
   "license": "Apache-2.0",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "test/fixtures/*"
   ],
   "scripts": {
     "test": "jest"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.64",
+    "@types/hjson": "^2.4.2",
     "@types/jest": "^26.0.3",
     "@types/node": "^12.0.0",
+    "@types/tmp": "^0.2.0",
+    "@types/unzipper": "^0.10.3",
+    "aws-sdk": "*",
+    "get-port": "^5.1.1",
+    "hjson": "^3.2.2",
     "jest": "^26.1.0",
     "prettier": "^2.0.5",
+    "tmp": "^0.2.1",
     "ts-jest": "^26.1.1",
-    "typescript": "^3.9.5"
+    "typescript": "^3.9.5",
+    "unzipper": "^0.10.11",
+    "yaml": "^2.0.0-1"
+  },
+  "resolutions": {
+    "next": "^10.0.3",
+    "aws-sdk": "2.771.0"
   }
 }

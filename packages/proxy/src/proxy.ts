@@ -1,10 +1,16 @@
-import * as url from 'url';
+import { parse as parseUrl } from 'url';
 import { Route, isHandler, HandleValue } from '@vercel/routing-utils';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './util/is-url';
 import { RouteResult, HTTPHeaders } from './types';
 
+/**
+ *
+ * @param str
+ * @param match
+ * @param keys
+ */
 function resolveRouteParameters(
   str: string,
   match: string[],
@@ -33,6 +39,8 @@ export class Proxy {
     this.routes = routes;
     this.lambdaRoutes = new Set<string>(lambdaRoutes);
     this.staticRoutes = new Set<string>(staticRoutes);
+
+    console.log('this.lambdaRoutes', this.lambdaRoutes)
   }
 
   _checkFileSystem = (path: string) => {
@@ -40,7 +48,7 @@ export class Proxy {
   };
 
   route(reqUrl: string) {
-    const parsedUrl = url.parse(reqUrl, true);
+    const parsedUrl = parseUrl(reqUrl, true);
     let query = parsedUrl.query;
     let reqPathname = parsedUrl.pathname ?? '/';
     let result: RouteResult | undefined;
@@ -51,9 +59,20 @@ export class Proxy {
     let combinedHeaders: HTTPHeaders = {};
 
     for (const routeConfig of this.routes) {
+      /**
+       * This is how the routing basically works
+       * 1. Checks if the route is an exact match to a route in the
+       *    S3 filesystem (e.g. /test.html -> s3://test.html)
+       *    --> true: returns found in filesystem
+       * 2.
+       *
+       */
+
       idx++;
       isContinue = false;
 
+      //////////////////////////////////////////////////////////////////////////
+      // Phase 1: Check for filesystem
       if (isHandler(routeConfig)) {
         phase = routeConfig.handle;
 
@@ -77,19 +96,26 @@ export class Proxy {
         continue;
       }
 
+      //////////////////////////////////////////////////////////////////////////
+      // Phase 2:
       const { src, headers } = routeConfig;
-
-      const keys: string[] = [];
-      const matcher = PCRE(`%${src}%`, keys);
+      let keys: string[] = []; // Filled by PCRE in next step
+      // Note: Routes are case-insensitive
+      // PCRE tries to match the path to the regex of the route
+      // It also parses the parameters to the keys variable
+      const matcher = PCRE(`%${src}%i`, keys);
       const match =
         matcher.exec(reqPathname) || matcher.exec(reqPathname!.substring(1));
 
       if (match) {
+        console.log('Match', src);
+
+        // The path that should be sent to the target system (lambda or filesystem)
         let destPath: string = reqPathname;
 
         if (routeConfig.dest) {
           // Fix for next.js 9.5+: Removes querystring from slug URLs
-          destPath = url.parse(
+          destPath = parseUrl(
             resolveRouteParameters(routeConfig.dest, match, keys)
           ).pathname!;
         }
@@ -114,12 +140,18 @@ export class Proxy {
 
         if (routeConfig.check && phase !== 'hit') {
           if (!this.lambdaRoutes.has(destPath)) {
+
+            // console.log('this.lambdaRoutes', this.lambdaRoutes)
             reqPathname = destPath;
+            console.log('HERE!', reqPathname);
+            // TODO: We should break here!
             continue;
           }
         }
 
+        console.log('destPath', destPath);
         const isDestUrl = isURL(destPath);
+
         if (isDestUrl) {
           result = {
             found: true,
@@ -139,7 +171,7 @@ export class Proxy {
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
-          const destParsed = url.parse(destPath, true);
+          const destParsed = parseUrl(destPath, true);
           Object.assign(destParsed.query, query);
           result = {
             found: true,
