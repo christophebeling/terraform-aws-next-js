@@ -25,11 +25,14 @@ async function buildFixtures() {
   );
 
   function build(buildPath) {
+    const command = 'yarnpkg';
+    const args = ['tf-next', 'build'];
+
     return new Promise((resolve, reject) => {
-      const child = spawn('yarnpkg', ['tf-next', 'build'], {
+      const child = spawn(command, args, {
         cwd: buildPath,
-        stdio: 'ignore',
-        // stdio: 'inherit',
+        // stdio: 'ignore',
+        stdio: 'inherit',
       });
 
       child.on('close', (code) => {
