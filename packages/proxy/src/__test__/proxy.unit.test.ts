@@ -3,6 +3,8 @@
  * @see: https://github.com/vercel/vercel/blob/master/packages/now-cli/test/dev-router.unit.js
  */
 
+import { URLSearchParams } from 'url';
+
 import { Proxy } from '../proxy';
 
 test('[proxy-unit] captured groups', () => {
@@ -15,7 +17,7 @@ test('[proxy-unit] captured groups', () => {
     continue: false,
     status: undefined,
     headers: {},
-    uri_args: {},
+    uri_args: new URLSearchParams(),
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
@@ -34,7 +36,7 @@ test('[proxy-unit] named groups', () => {
     continue: false,
     status: undefined,
     headers: {},
-    uri_args: { id: '123' },
+    uri_args: new URLSearchParams('id=123'),
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
@@ -58,7 +60,7 @@ test('[proxy-unit] optional named groups', () => {
     continue: false,
     status: undefined,
     headers: {},
-    uri_args: { name: '' },
+    uri_args: new URLSearchParams('name'),
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
@@ -88,7 +90,7 @@ test('[proxy-unit] shared lambda', () => {
     continue: false,
     status: undefined,
     headers: { 'x-nextjs-page': '/product/[...slug]' },
-    uri_args: { slug: 'hello/world' },
+    uri_args: new URLSearchParams('slug=hello/world'),
     matched_route: routesConfig[0],
     matched_route_idx: 0,
     userDest: true,
@@ -123,7 +125,7 @@ test('[proxy-unit] slug group and shared lambda', () => {
     continue: false,
     status: undefined,
     headers: { 'x-nextjs-page': '/product/[...slug]' },
-    uri_args: { slug: 'hello/world' },
+    uri_args: new URLSearchParams('slug=hello/world'),
     matched_route: routesConfig[1],
     matched_route_idx: 1,
     userDest: true,

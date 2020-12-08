@@ -56,13 +56,13 @@ describe('Test proxy config', () => {
 
       test('Proxy', async () => {
         for (const probe of probeFile.probes) {
-          const result = proxy.route(probe.path);
-
-          if (SAM.mapping.has(result.dest)) {
+          const proxyResult = proxy.route(probe.path);
+          if (SAM.mapping.has(proxyResult.dest)) {
             const response = await SAM.sendRequest({
-              functionName: SAM.mapping.get(result.dest)!,
-              path: result.dest,
-              headers: result.headers,
+              functionName: SAM.mapping.get(proxyResult.dest)!,
+              path: proxyResult.dest,
+              searchParams: proxyResult.uri_args,
+              headers: proxyResult.headers,
             });
 
             if (probe.mustContain) {
@@ -70,7 +70,7 @@ describe('Test proxy config', () => {
             }
           } else {
             fail(
-              `Could not resolve ${probe.path} to an existing lambda! (Resolved to: ${result.dest})`
+              `Could not resolve ${probe.path} to an existing lambda! (Resolved to: ${proxyResult.dest})`
             );
           }
         }

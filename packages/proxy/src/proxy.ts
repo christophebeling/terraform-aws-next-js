@@ -1,4 +1,4 @@
-import { URL } from 'url';
+import { URL, URLSearchParams } from 'url';
 import { Route, isHandler, HandleValue } from '@vercel/routing-utils';
 import PCRE from 'pcre-to-regexp';
 
@@ -11,11 +11,26 @@ const baseUrl = 'http://example.org';
 
 function parseUrl(url: string) {
   const _url = new URL(url, baseUrl);
-  const query = Object.fromEntries(_url.searchParams);
   return {
     pathname: _url.pathname,
-    query,
+    searchParams: _url.searchParams,
   };
+}
+
+/**
+ * Appends URLSearchParams from param 2 to param 1.
+ * Basically Object.assign for URLSearchParams
+ * @param param1
+ * @param param2
+ */
+function appendURLSearchParams(
+  param1: URLSearchParams,
+  param2: URLSearchParams
+) {
+  for (const [key, value] of param2.entries()) {
+    param1.append(key, value);
+  }
+  return param1;
 }
 
 /**
@@ -60,8 +75,7 @@ export class Proxy {
 
   route(reqUrl: string) {
     const parsedUrl = parseUrl(reqUrl);
-    let { query } = parsedUrl;
-    let reqPathname = parsedUrl.pathname ?? '/';
+    let { searchParams, pathname: reqPathname = '/' } = parsedUrl;
     let result: RouteResult | undefined;
     let status: number | undefined;
     let isContinue = false;
@@ -151,7 +165,7 @@ export class Proxy {
             // When it is not a lambda route we cut the url_args
             // for the next iteration
             const nextUrl = parseUrl(destPath);
-            Object.assign(query, nextUrl.query);
+            appendURLSearchParams(searchParams, nextUrl.searchParams);
             reqPathname = nextUrl.pathname!;
             continue;
           }
@@ -167,7 +181,7 @@ export class Proxy {
             userDest: false,
             isDestUrl,
             status: routeConfig.status || status,
-            uri_args: query,
+            uri_args: searchParams,
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
@@ -180,7 +194,7 @@ export class Proxy {
           }
 
           const destParsed = parseUrl(destPath);
-          Object.assign(destParsed.query, query);
+          appendURLSearchParams(searchParams, destParsed.searchParams);
           result = {
             found: true,
             dest: destParsed.pathname || '/',
@@ -188,7 +202,7 @@ export class Proxy {
             userDest: Boolean(routeConfig.dest),
             isDestUrl,
             status: routeConfig.status || status,
-            uri_args: destParsed.query,
+            uri_args: searchParams,
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
@@ -206,7 +220,7 @@ export class Proxy {
         continue: isContinue,
         status,
         isDestUrl: false,
-        uri_args: query,
+        uri_args: searchParams,
         phase,
         headers: combinedHeaders,
       };

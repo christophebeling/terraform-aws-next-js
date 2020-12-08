@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { URLSearchParams } from 'url';
 import { dirSync as tmpDir } from 'tmp';
 import { Extract } from 'unzipper';
 import { stringify as yaml } from 'yaml';
@@ -52,6 +53,7 @@ interface SendRequestPayload {
   functionName: string;
   path: string;
   headers?: Record<string, string>;
+  searchParams?: URLSearchParams;
 }
 
 interface SendRequestResponse {
@@ -156,6 +158,7 @@ export async function generateSAM({ lambdas, cwd }: Props): Promise<SAM> {
       headers: payload.headers || {},
       httpMethod: 'GET',
       path: payload.path,
+      searchParams: payload.searchParams,
     });
 
     return client
