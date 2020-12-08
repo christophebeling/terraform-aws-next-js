@@ -68,6 +68,10 @@ describe('Test proxy config', () => {
             if (probe.mustContain) {
               expect(response.body).toContain(probe.mustContain);
             }
+          } else {
+            fail(
+              `Could not resolve ${probe.path} to an existing lambda! (Resolved to: ${result.dest})`
+            );
           }
         }
       });

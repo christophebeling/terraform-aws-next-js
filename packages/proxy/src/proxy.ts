@@ -1,9 +1,22 @@
-import { parse as parseUrl } from 'url';
+import { URL } from 'url';
 import { Route, isHandler, HandleValue } from '@vercel/routing-utils';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './util/is-url';
 import { RouteResult, HTTPHeaders } from './types';
+
+// Since we have no replacement for url.parse, thanks Node.js
+// https://github.com/nodejs/node/issues/12682
+const baseUrl = 'http://example.org';
+
+function parseUrl(url: string) {
+  const _url = new URL(url, baseUrl);
+  const query = Object.fromEntries(_url.searchParams);
+  return {
+    pathname: _url.pathname,
+    query,
+  };
+}
 
 /**
  *
@@ -39,8 +52,6 @@ export class Proxy {
     this.routes = routes;
     this.lambdaRoutes = new Set<string>(lambdaRoutes);
     this.staticRoutes = new Set<string>(staticRoutes);
-
-    console.log('this.lambdaRoutes', this.lambdaRoutes)
   }
 
   _checkFileSystem = (path: string) => {
@@ -48,14 +59,14 @@ export class Proxy {
   };
 
   route(reqUrl: string) {
-    const parsedUrl = parseUrl(reqUrl, true);
-    let query = parsedUrl.query;
+    const parsedUrl = parseUrl(reqUrl);
+    let { query } = parsedUrl;
     let reqPathname = parsedUrl.pathname ?? '/';
     let result: RouteResult | undefined;
     let status: number | undefined;
     let isContinue = false;
     let idx = -1;
-    let phase: HandleValue | null = null;
+    let phase: HandleValue | undefined;
     let combinedHeaders: HTTPHeaders = {};
 
     for (const routeConfig of this.routes) {
@@ -72,7 +83,7 @@ export class Proxy {
       isContinue = false;
 
       //////////////////////////////////////////////////////////////////////////
-      // Phase 1: Check for filesystem
+      // Phase 1: Check for handler
       if (isHandler(routeConfig)) {
         phase = routeConfig.handle;
 
@@ -97,7 +108,7 @@ export class Proxy {
       }
 
       //////////////////////////////////////////////////////////////////////////
-      // Phase 2:
+      // Phase 2: Check for source
       const { src, headers } = routeConfig;
       let keys: string[] = []; // Filled by PCRE in next step
       // Note: Routes are case-insensitive
@@ -107,17 +118,14 @@ export class Proxy {
       const match =
         matcher.exec(reqPathname) || matcher.exec(reqPathname!.substring(1));
 
-      if (match) {
-        console.log('Match', src);
-
+      if (match !== null) {
         // The path that should be sent to the target system (lambda or filesystem)
         let destPath: string = reqPathname;
 
         if (routeConfig.dest) {
-          // Fix for next.js 9.5+: Removes querystring from slug URLs
-          destPath = parseUrl(
-            resolveRouteParameters(routeConfig.dest, match, keys)
-          ).pathname!;
+          // Rewrite dynamic routes
+          // e.g. /posts/1234 -> /posts/[id]?id=1234
+          destPath = resolveRouteParameters(routeConfig.dest, match, keys);
         }
 
         if (headers) {
@@ -140,16 +148,15 @@ export class Proxy {
 
         if (routeConfig.check && phase !== 'hit') {
           if (!this.lambdaRoutes.has(destPath)) {
-
-            // console.log('this.lambdaRoutes', this.lambdaRoutes)
-            reqPathname = destPath;
-            console.log('HERE!', reqPathname);
-            // TODO: We should break here!
+            // When it is not a lambda route we cut the url_args
+            // for the next iteration
+            const nextUrl = parseUrl(destPath);
+            Object.assign(query, nextUrl.query);
+            reqPathname = nextUrl.pathname!;
             continue;
           }
         }
 
-        console.log('destPath', destPath);
         const isDestUrl = isURL(destPath);
 
         if (isDestUrl) {
@@ -171,7 +178,8 @@ export class Proxy {
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
-          const destParsed = parseUrl(destPath, true);
+
+          const destParsed = parseUrl(destPath);
           Object.assign(destParsed.query, query);
           result = {
             found: true,
